@@ -12,9 +12,10 @@ jobs:
   notify-discord:
     runs-on: ubuntu-latest
     steps:
-      - name: Build Discord embed fields
-        id: msg
+      - name: Post Discord embed
         env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ISSUE_WEBHOOK: ${{ secrets.DISCORD_ISSUE_WEBHOOK }}
           EVENT_NAME: ${{ github.event_name }}
           ACTION: ${{ github.event.action }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -29,7 +30,13 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           python3 <<'PY'
-          import os
+          import json, os, urllib.error, urllib.request
+
+          webhook = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip() or (
+              os.environ.get("DISCORD_ISSUE_WEBHOOK") or ""
+          ).strip()
+          if not webhook:
+              raise SystemExit("Missing secret DISCORD_WEBHOOK_URL (or DISCORD_ISSUE_WEBHOOK)")
 
           event = os.environ.get("EVENT_NAME") or ""
           action = os.environ.get("ACTION") or ""
@@ -91,38 +98,47 @@ jobs:
           if category:
               desc += f"\n🏷️ Category: {category}"
 
+          # Discord requires integer color (not a hex string)
           colors = {
-              ("issue", "opened"): "23AF92",
-              ("issue", "closed"): "2ECC71",
-              ("issue", "reopened"): "FFA500",
-              ("issue_comment", "created"): "5865F2",
-              ("discussion", "created"): "3D94F4",
-              ("discussion", "answered"): "2ECC71",
-              ("discussion", "locked"): "FF4444",
-              ("discussion_comment", "created"): "5865F2",
+              ("issue", "opened"): 0x23AF92,
+              ("issue", "closed"): 0x2ECC71,
+              ("issue", "reopened"): 0xFFA500,
+              ("issue_comment", "created"): 0x5865F2,
+              ("discussion", "created"): 0x3D94F4,
+              ("discussion", "answered"): 0x2ECC71,
+              ("discussion", "locked"): 0xFF4444,
+              ("discussion_comment", "created"): 0x5865F2,
           }
-          color = colors.get((event_type, action), "CCCCCC")
+          color = colors.get((event_type, action), 0xCCCCCC)
 
-          out = os.environ["GITHUB_OUTPUT"]
+          payload = {
+              "username": "mailroom-ops-bot",
+              "avatar_url": "https://i.imgur.com/CsZ3mRy.png",
+              "embeds": [
+                  {
+                      "title": embed_title[:256],
+                      "description": desc[:4096],
+                      "color": color,
+                      "url": url or None,
+                  }
+              ],
+          }
+          # Drop null url
+          if not payload["embeds"][0]["url"]:
+              del payload["embeds"][0]["url"]
 
-          def set_out(name: str, value: str) -> None:
-              with open(out, "a", encoding="utf-8") as f:
-                  if "\n" in value:
-                      f.write(f"{name}<<EOF\n{value}\nEOF\n")
-                  else:
-                      f.write(f"{name}={value}\n")
-
-          set_out("embed_title", embed_title)
-          set_out("embed_description", desc)
-          set_out("embed_color", color)
+          data = json.dumps(payload).encode("utf-8")
+          req = urllib.request.Request(
+              webhook,
+              data=data,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  print(f"Discord webhook OK status={resp.status}")
+          except urllib.error.HTTPError as e:
+              err_body = e.read().decode("utf-8", errors="replace")
+              # Never print the webhook URL
+              raise SystemExit(f"Discord webhook failed status={e.code} body={err_body}") from None
           PY
-
-      - name: Send to Discord
-        uses: tsickert/discord-webhook@v6.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL || secrets.DISCORD_ISSUE_WEBHOOK }}
-          username: mailroom-ops-bot
-          avatar-url: https://i.imgur.com/CsZ3mRy.png
-          embed-title: ${{ steps.msg.outputs.embed_title }}
-          embed-description: ${{ steps.msg.outputs.embed_description }}
-          embed-color: ${{ steps.msg.outputs.embed_color }}
