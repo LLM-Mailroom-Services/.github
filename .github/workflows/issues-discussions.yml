@@ -1,0 +1,46 @@
+name: Issue & Discussion Notifications to Discord
+
+on:
+  workflow_call:
+    inputs:
+      event_type:
+        required: true
+        type: string
+      title:
+        required: true
+        type: string
+      body:
+        required: false
+        type: string
+      actor:
+        required: true
+        type: string
+      url:
+        required: true
+        type: string
+      action:
+        required: false
+        type: string
+        default: 'opened'
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Discord
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          username: mailroom-ops-bot
+          avatar-url: https://i.imgur.com/CsZ3mRy.png
+          title: >
+            ${{ inputs.event_type == 'issue' && (inputs.action == 'closed') && '✅ Closed Issue' || inputs.event_type == 'issue' && (inputs.action == 'reopened') && '🔄 Reopened Issue' || inputs.event_type == 'issue' && '📌 New Issue' || inputs.event_type == 'discussion' && '💬 Discussion Update' || '🔔 Notification' }}
+          description: >
+            **${{ inputs.title }}**
+            
+            ${{ inputs.body != '' && format('
+
+{0}', inputs.body) || '' }}
+            
+            👤 By: ${{ inputs.actor }}
+            🔗 [View](${{ inputs.url }})
