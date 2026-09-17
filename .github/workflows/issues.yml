@@ -1,0 +1,32 @@
+name: Issue Notifications to Discord
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Discord
+        if: github.event.action == 'opened' || github.event.action == 'closed' || github.event.action == 'reopened' || github.event_name == 'issue_comment'
+        uses: tsickert/discord-webhook@v5.3.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          username: mailroom-issue-bot
+          title: >
+            ${{ 
+              (github.event.action == 'opened') && '🆕 New Issue' ||
+              (github.event.action == 'closed') && '✅ Closed Issue' ||
+              (github.event.action == 'reopened') && '🔄 Reopened Issue' ||
+              '💬 Comment on Issue'
+            }}
+          description: >
+            **${{ github.event.issue.title }}**
+            
+            ${{ github.event.comment?.body || 'No additional content.' }}
+            
+            👤 **Author:** ${{ github.actor }}
+            🔗 [View on GitHub](${{ github.event.issue.html_url }})
