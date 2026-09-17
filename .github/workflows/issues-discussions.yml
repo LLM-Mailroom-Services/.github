@@ -1,50 +1,128 @@
 name: Issue & Discussion Notifications to Discord
 
+# Reusable workflow — called from consumer repos (e.g. mailroom-issues).
+# github.* context is the caller's event payload (see GitHub reusable workflow docs).
+# Secret: DISCORD_WEBHOOK_URL on the caller repo (passed via secrets: inherit).
+# Back-compat: also accepts DISCORD_ISSUE_WEBHOOK if DISCORD_WEBHOOK_URL is unset.
+
 on:
   workflow_call:
-    inputs:
-      event_type:
-        required: true
-        type: string
-      title:
-        required: true
-        type: string
-      body:
-        required: false
-        type: string
-      actor:
-        required: true
-        type: string
-      url:
-        required: true
-        type: string
-      action:
-        required: false
-        type: string
-        default: 'opened'
-      discussion_category:
-        required: false
-        type: string
 
 jobs:
   notify-discord:
     runs-on: ubuntu-latest
     steps:
+      - name: Build Discord embed fields
+        id: msg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          DISCUSSION_TITLE: ${{ github.event.discussion.title }}
+          DISCUSSION_BODY: ${{ github.event.discussion.body }}
+          DISCUSSION_URL: ${{ github.event.discussion.html_url }}
+          DISCUSSION_CATEGORY: ${{ github.event.discussion.category.name }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          python3 <<'PY'
+          import os
+
+          event = os.environ.get("EVENT_NAME") or ""
+          action = os.environ.get("ACTION") or ""
+          actor = os.environ.get("ACTOR") or ""
+
+          if event == "issues":
+              title = os.environ.get("ISSUE_TITLE") or ""
+              body = os.environ.get("ISSUE_BODY") or ""
+              url = os.environ.get("ISSUE_URL") or ""
+              event_type = "issue"
+          elif event == "issue_comment":
+              title = os.environ.get("ISSUE_TITLE") or ""
+              body = os.environ.get("COMMENT_BODY") or ""
+              url = os.environ.get("COMMENT_URL") or os.environ.get("ISSUE_URL") or ""
+              event_type = "issue_comment"
+          elif event == "discussion":
+              title = os.environ.get("DISCUSSION_TITLE") or ""
+              body = os.environ.get("DISCUSSION_BODY") or ""
+              url = os.environ.get("DISCUSSION_URL") or ""
+              event_type = "discussion"
+          elif event == "discussion_comment":
+              title = os.environ.get("DISCUSSION_TITLE") or ""
+              body = os.environ.get("COMMENT_BODY") or ""
+              url = os.environ.get("COMMENT_URL") or os.environ.get("DISCUSSION_URL") or ""
+              event_type = "discussion_comment"
+          else:
+              title, body, url, event_type = event, "", "", event
+
+          titles = {
+              ("issue", "opened"): "🆕 New Issue",
+              ("issue", "closed"): "✅ Closed Issue",
+              ("issue", "reopened"): "🔄 Reopened Issue",
+              ("issue_comment", "created"): "💬 New Issue Comment",
+              ("issue_comment", "edited"): "✏️ Edited Issue Comment",
+              ("discussion", "created"): "💬 New Discussion",
+              ("discussion", "answered"): "✅ Discussion Answered",
+              ("discussion", "unanswered"): "❓ Discussion Unanswered",
+              ("discussion", "edited"): "✏️ Updated Discussion",
+              ("discussion", "locked"): "🔒 Locked Discussion",
+              ("discussion", "unlocked"): "🔓 Unlocked Discussion",
+              ("discussion", "pinned"): "📌 Pinned Discussion",
+              ("discussion", "unpinned"): "📌 Unpinned Discussion",
+              ("discussion", "transferred"): "➡️ Transferred Discussion",
+              ("discussion", "category_changed"): "🏷️ Category Changed Discussion",
+              ("discussion_comment", "created"): "💬 New Discussion Comment",
+              ("discussion_comment", "edited"): "✏️ Edited Discussion Comment",
+          }
+          embed_title = titles.get((event_type, action), "🔔 Notification")
+
+          body = (body or "No additional details.").strip()
+          if len(body) > 1500:
+              body = body[:1500] + "…"
+
+          category = os.environ.get("DISCUSSION_CATEGORY") or ""
+          desc = (
+              f"**{title}**\n\n{body}\n\n"
+              f"👤 By: {actor}\n🔗 [View on GitHub]({url})"
+          )
+          if category:
+              desc += f"\n🏷️ Category: {category}"
+
+          colors = {
+              ("issue", "opened"): "23AF92",
+              ("issue", "closed"): "2ECC71",
+              ("issue", "reopened"): "FFA500",
+              ("issue_comment", "created"): "5865F2",
+              ("discussion", "created"): "3D94F4",
+              ("discussion", "answered"): "2ECC71",
+              ("discussion", "locked"): "FF4444",
+              ("discussion_comment", "created"): "5865F2",
+          }
+          color = colors.get((event_type, action), "CCCCCC")
+
+          out = os.environ["GITHUB_OUTPUT"]
+
+          def set_out(name: str, value: str) -> None:
+              with open(out, "a", encoding="utf-8") as f:
+                  if "\n" in value:
+                      f.write(f"{name}<<EOF\n{value}\nEOF\n")
+                  else:
+                      f.write(f"{name}={value}\n")
+
+          set_out("embed_title", embed_title)
+          set_out("embed_description", desc)
+          set_out("embed_color", color)
+          PY
+
       - name: Send to Discord
         uses: tsickert/discord-webhook@v6.0.0
         with:
-          webhook-url: ${{ secrets.DISCORD_ISSUE_WEBHOOK }}
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL || secrets.DISCORD_ISSUE_WEBHOOK }}
           username: mailroom-ops-bot
           avatar-url: https://i.imgur.com/CsZ3mRy.png
-          embed-title: >
-            ${{ inputs.event_type == 'issue' && inputs.action == 'closed' && '✅ Closed Issue' || inputs.event_type == 'issue' && inputs.action == 'reopened' && '🔄 Reopened Issue' || inputs.event_type == 'discussion' && inputs.action == 'archived' && '📦 Archived Discussion' || inputs.event_type == 'discussion' && inputs.action == 'unarchived' && '📤 Unarchived Discussion' || inputs.event_type == 'discussion' && inputs.action == 'pinned' && '📌 Pinned Discussion' || inputs.event_type == 'discussion' && inputs.action == 'unpinned' && '📌 Unpinned Discussion' || inputs.event_type == 'discussion' && inputs.action == 'locked' && '🔒 Locked Discussion' || inputs.event_type == 'discussion' && inputs.action == 'unlocked' && '🔓 Unlocked Discussion' || inputs.event_type == 'discussion' && inputs.action == 'transferred' && '➡️ Transferred Discussion' || inputs.event_type == 'discussion' && inputs.action == 'category_changed' && '🏷️ Category Changed Discussion' || inputs.event_type == 'discussion' && inputs.action == 'updated' && '✏️ Updated Discussion' || inputs.event_type == 'discussion' && '💬 New Discussion' || inputs.event_type == 'issue_comment' && inputs.action == 'created' && '💬 New Issue Comment' || inputs.event_type == 'issue_comment' && '✏️ Edited Issue Comment' || '🔔 Notification' }}
-          embed-description: |
-            **${{ inputs.title }}**
-
-            ${{ inputs.body != '' && inputs.body || 'No additional details.' }}
-
-            👤 By: ${{ inputs.actor }}
-            🔗 [View on GitHub](${{ inputs.url }})
-            ${{ inputs.discussion_category != '' && format('🏷️ Category: {0}', inputs.discussion_category) || '' }}
-          embed-color: >
-            ${{ inputs.event_type == 'issue' && inputs.action == 'closed' && '100278E9' || inputs.event_type == 'issue' && inputs.action == 'reopened' && 'FFA500' || inputs.event_type == 'discussion' && inputs.action == 'archived' && '6B7B8D' || inputs.event_type == 'discussion' && inputs.action == 'pinned' && 'FFD700' || inputs.event_type == 'discussion' && inputs.action == 'locked' && 'FF4444' || inputs.event_type == 'discussion' && inputs.action == 'unlocked' && '44BB44' || inputs.event_type == 'discussion' && inputs.action == 'transferred' && 'AA44FF' || inputs.event_type == 'discussion' && inputs.action == 'category_changed' && 'FF88CC' || inputs.event_type == 'discussion' && '3D94F4' || inputs.event_type == 'issue' && '23AF92' || 'CCCCCC' }}
+          embed-title: ${{ steps.msg.outputs.embed_title }}
+          embed-description: ${{ steps.msg.outputs.embed_description }}
+          embed-color: ${{ steps.msg.outputs.embed_color }}
