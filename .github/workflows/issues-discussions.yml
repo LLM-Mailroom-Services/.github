@@ -123,15 +123,18 @@ jobs:
                   }
               ],
           }
-          # Drop null url
           if not payload["embeds"][0]["url"]:
               del payload["embeds"][0]["url"]
 
           data = json.dumps(payload).encode("utf-8")
+          # Cloudflare blocks Python-urllib default UA (error 1010); DiscordBot UA is allowed.
           req = urllib.request.Request(
               webhook,
               data=data,
-              headers={"Content-Type": "application/json"},
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "DiscordBot (https://github.com/LLM-Mailroom-Services/mailroom-issues, 1.0)",
+              },
               method="POST",
           )
           try:
@@ -139,6 +142,5 @@ jobs:
                   print(f"Discord webhook OK status={resp.status}")
           except urllib.error.HTTPError as e:
               err_body = e.read().decode("utf-8", errors="replace")
-              # Never print the webhook URL
               raise SystemExit(f"Discord webhook failed status={e.code} body={err_body}") from None
           PY
