@@ -11,28 +11,20 @@ Multi-agent pipeline · Prompt-experiment loop · Deterministic scoring · Pixel
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/LICENSE)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/LLM-Mailroom-Services/Digital-Mailroom/main/docs/assets/mailroom-processing-banner-dark.svg">
-  <img src="https://raw.githubusercontent.com/LLM-Mailroom-Services/Digital-Mailroom/main/docs/assets/mailroom-processing-banner.svg" alt="Mailroom processing pipeline — six stages from intake to routing, human-in-the-loop review, and every file committed to the auditable hash archive" width="880"/>
-</picture>
 
 </div>
 
 ---
 
-> **Canonical architecture & taxonomy:** the [canonical Mailroom pipeline](https://raw.githubusercontent.com/LLM-Mailroom-Services/Digital-Mailroom/main/docs/assets/mailroom-pipeline.svg) and the [v7 taxonomy specification](https://github.com/LLM-Mailroom-Services/Digital-Mailroom/blob/main/docs/v7-taxonomy.md) are the root-level sources of truth for the pipeline visualization and v7 terminology.
-
-## Executive introduction
+## About Us...
 
 **Mailroom Incorporated™** (`LLM-Mailroom-Services`) is the governing organization for the **LLM-Mailroom** — an open, reproducible platform that reads, classifies, extracts from, and archives legal and business documents with a coordinated team of specialist LLM agents.
-
-The platform is not a single application; it is a **constellation**. A corpus layer turns raw public corpora into a pipeline-ready dataset. A prompt-experiment loop evolves the agents that read those documents. A shared scoring engine measures every run deterministically. A LangGraph pipeline routes each document through its stations — intake, sorting, specialist extraction, judgment, escalation, and archival. A set of surfaces — a pixel-art visualizer, a walking office floor, a local sandbox, and a knowledge graph — make the machinery legible to humans.
 
 Everything is governed: one monorepo is the central truth, every package mirrors an independent upstream repository, and a machine-readable task board keeps work claimed, evidenced, and closed. The organization's repositories are the coordination surface for that work — the pipeline, the corpora, the experiments, the evaluations, and the people who run them.
 
 ## Architecture
 
-```
+```plaintext
                     ┌── corpus feeds (colocated data) ─────────────────────┐
                     │  Enron-Evaluation-Environment   claims-data-eda      │
                     │  mailroom-corpus-eda   (mailroom-corpus, P0–P6 EDA)  │
@@ -109,8 +101,8 @@ Every package lives in `Digital-Mailroom/packages/` as a git subtree and mirrors
 | Member | Role | Focus | Affiliation |
 | :--- | :--- | :--- | :--- |
 | [**Exios66**](https://github.com/Exios66) — Jack J Burleson // LJM | Owner | Neuroscience & Machine Learning · platform architecture, pipeline & prompt engineering | UW-Madison · Las Vegas, NV |
-| [**grantmooslin**](https://github.com/grantmooslin) | Member | Constellation engineering & review | — |
-| [**jjburleson**](https://github.com/jjburleson) | Member | Constellation engineering & review | — |
+| [**grantmooslin**](https://github.com/grantmooslin) | Owner | Constellation engineering & review | UW-Madison |
+| [**jjburleson**](https://github.com/jjburleson) | Security Manager | Security Analyst & Moderator | UW-Madison |
 
 </div>
 
