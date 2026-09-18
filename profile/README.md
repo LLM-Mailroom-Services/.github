@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏛️ MAILROOM INCORPORATED™
+# 📬 MAILROOM INCORPORATED ™
 
 **The organization behind the LLM-Mailroom constellation — a governed, multi-agent legal-document processing platform built as one reproducible ecosystem.**
 
@@ -16,7 +16,7 @@ Multi-agent pipeline · Prompt-experiment loop · Deterministic scoring · Pixel
 
 ---
 
-## About Us...
+## ⚚ About Us...
 
 **Mailroom Incorporated™** (`LLM-Mailroom-Services`) is the governing organization for the **LLM-Mailroom** — an open, reproducible platform that reads, classifies, extracts from, and archives legal and business documents with a coordinated team of specialist LLM agents.
 
@@ -107,14 +107,6 @@ Every package lives in `Digital-Mailroom/packages/` as a git subtree and mirrors
 </div>
 
 The organization is small by design: a governed evaluation family where every specialty — data, prompts, UI, systems, docs, governance — has an accountable owner, and every change is claimed on the board before it is written.
-
-## Governance
-
-- **One source of truth.** [`Digital-Mailroom`](https://github.com/LLM-Mailroom-Services/Digital-Mailroom) is the central monorepo; upstream `Exios66/*` repositories are release vehicles, never hand-edited mirrors.
-- **Board before code.** `governance/TASKS.md` and its [live dispatch board](https://digital-mailroom-theta.vercel.app) track every card across `unassigned → assigned → in_progress → needs_attention → done`.
-- **Cross-repo work is filed once.** [`mailroom-issues`](https://github.com/LLM-Mailroom-Services/mailroom-issues) is the constellation-wide issue hub for epics, RFCs, and org-level decisions; single-repo work stays in its own repository.
-- **Evidence closes cards.** No silent completion — a card is done only when its suites are green, its scope is clean, and its evidence names the commit.
-- **Deterministic by default.** Every evaluation is reproducible; every experiment lands in one append-only log; mock-first is the law.
 
 ## Quick links
 
